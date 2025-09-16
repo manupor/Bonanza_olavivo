@@ -414,11 +414,23 @@
             transition: all 0.3s ease;
         }
         
-        .slot-reel.spinning {
-            animation: continuousSpin 0.1s linear infinite;
+        .slot-reel {
+            position: relative;
         }
         
-        @keyframes continuousSpin {
+        .slot-reel .symbol-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .slot-reel.spinning .symbol-container {
+            animation: smoothSpin 0.15s linear infinite;
+        }
+        
+        @keyframes smoothSpin {
             0% { 
                 transform: translateY(0);
             }
@@ -427,20 +439,39 @@
             }
         }
         
-        /* Stopping animation */
-        .slot-reel.stopping {
-            animation: spinDecelerate 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        /* Stopping animation with bounce */
+        .slot-reel.stopping .symbol-container {
+            animation: spinToStop 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
         
-        @keyframes spinDecelerate {
+        @keyframes spinToStop {
             0% {
                 transform: translateY(0);
             }
-            50% {
-                transform: translateY(-40px);
+            70% {
+                transform: translateY(-20px);
+            }
+            85% {
+                transform: translateY(5px);
             }
             100% {
                 transform: translateY(0);
+            }
+        }
+        
+        /* Winning highlight animation */
+        .slot-reel.winning .slot-symbol {
+            animation: winningGlow 0.8s ease-in-out 3 alternate;
+        }
+        
+        @keyframes winningGlow {
+            0% {
+                box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                transform: scale(1);
+            }
+            100% {
+                box-shadow: 0 0 30px rgba(255, 215, 0, 1), 0 0 50px rgba(255, 215, 0, 0.7);
+                transform: scale(1.05);
             }
         }
 
@@ -1022,23 +1053,38 @@
             }
             
             createSpinningSymbols(reel) {
-                // Create additional symbols for continuous spinning effect
-                const existingSymbols = reel.querySelectorAll('.slot-symbol');
-                const symbolHeight = 80; // Height of each symbol
-                const reelHeight = 240; // Total reel height
-                const symbolsNeeded = Math.ceil(reelHeight / symbolHeight) + 2; // Extra symbols for seamless loop
+                // Create container for spinning symbols
+                const container = document.createElement('div');
+                container.className = 'symbol-container';
                 
-                // Clear existing symbols
+                // Clear existing content
                 reel.innerHTML = '';
                 
-                // Create symbols for continuous loop
+                // Create enough symbols for smooth infinite scroll
+                const symbolsNeeded = 8; // More symbols for smoother animation
+                
                 for (let i = 0; i < symbolsNeeded; i++) {
                     const symbolDiv = document.createElement('div');
                     symbolDiv.className = 'slot-symbol';
                     const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
                     symbolDiv.textContent = randomSymbol;
-                    reel.appendChild(symbolDiv);
+                    container.appendChild(symbolDiv);
                 }
+                
+                reel.appendChild(container);
+                
+                // Continuously change symbols during spinning
+                this.symbolChangeInterval = setInterval(() => {
+                    if (reel.classList.contains('spinning')) {
+                        const symbols = container.querySelectorAll('.slot-symbol');
+                        symbols.forEach(symbol => {
+                            if (Math.random() < 0.3) { // 30% chance to change each symbol
+                                const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
+                                symbol.textContent = randomSymbol;
+                            }
+                        });
+                    }
+                }, 100);
             }
 
             setupEventListeners() {
@@ -1072,13 +1118,18 @@
                     reel.classList.add('spinning');
                 });
 
-                // Spin for 2 seconds
+                // Spin for 2.5 seconds for better effect
                 setTimeout(() => {
                     this.stopSpin();
-                }, 2000);
+                }, 2500);
             }
 
             stopSpin() {
+                // Clear symbol change interval
+                if (this.symbolChangeInterval) {
+                    clearInterval(this.symbolChangeInterval);
+                }
+                
                 // Stop reels with staggered timing
                 this.reels.forEach((reel, index) => {
                     setTimeout(() => {
@@ -1089,7 +1140,7 @@
                         setTimeout(() => {
                             reel.classList.remove('stopping');
                             
-                            // Reset to 3 symbols and randomize
+                            // Reset to 3 symbols
                             reel.innerHTML = '';
                             for (let i = 0; i < 3; i++) {
                                 const symbolDiv = document.createElement('div');
@@ -1106,15 +1157,14 @@
                                     
                                     // Force win and show bonus popup on 3rd spin
                                     if (this.spinCount >= 3) {
-                                        this.forceWin();
-                                        this.showBonusModal();
+                                        this.forceWinWithDelay();
                                     } else {
                                         this.checkWin();
                                     }
-                                }, 200);
+                                }, 300);
                             }
-                        }, 800);
-                    }, index * 400); // Stagger each reel stop by 400ms
+                        }, 1000);
+                    }, index * 500); // Stagger each reel stop by 500ms
                 });
             }
 
@@ -1169,7 +1219,7 @@
             }
 
             forceWin() {
-                // Force a jackpot win
+                // Force a jackpot win with diamonds
                 this.reels.forEach(reel => {
                     const symbols = reel.querySelectorAll('.slot-symbol');
                     symbols.forEach(symbol => {
@@ -1181,7 +1231,24 @@
                 this.balance += winAmount;
                 this.addWin(winAmount);
                 this.updateDisplay();
-                this.showWin(winAmount);
+            }
+            
+            forceWinWithDelay() {
+                // First, set the winning symbols
+                this.forceWin();
+                
+                // Add winning glow effect to all reels
+                this.reels.forEach(reel => {
+                    reel.classList.add('winning');
+                });
+                
+                // Wait for user to see the matching symbols, then show popup
+                setTimeout(() => {
+                    this.reels.forEach(reel => {
+                        reel.classList.remove('winning');
+                    });
+                    this.showBonusModal();
+                }, 2500); // 2.5 second delay to show winning symbols
             }
 
 
