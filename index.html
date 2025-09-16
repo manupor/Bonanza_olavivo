@@ -415,12 +415,85 @@
         }
         
         .slot-reel.spinning .slot-symbol {
-            animation: spin 0.1s linear infinite;
+            animation: realisticSpin 0.08s ease-out infinite;
         }
         
-        @keyframes spin {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-240px); }
+        .slot-reel.spinning {
+            position: relative;
+        }
+        
+        .slot-reel.spinning::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.1) 0%,
+                transparent 20%,
+                transparent 80%,
+                rgba(0, 0, 0, 0.1) 100%
+            );
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        @keyframes realisticSpin {
+            0% { 
+                transform: translateY(0) scale(1);
+                opacity: 1;
+                filter: blur(0px);
+            }
+            25% {
+                transform: translateY(-60px) scale(0.98);
+                opacity: 0.9;
+                filter: blur(0.5px);
+            }
+            50% {
+                transform: translateY(-120px) scale(0.95);
+                opacity: 0.8;
+                filter: blur(1px);
+            }
+            75% {
+                transform: translateY(-180px) scale(0.98);
+                opacity: 0.9;
+                filter: blur(0.5px);
+            }
+            100% { 
+                transform: translateY(-240px) scale(1);
+                opacity: 1;
+                filter: blur(0px);
+            }
+        }
+        
+        /* Stopping animation with realistic deceleration */
+        .slot-reel.stopping .slot-symbol {
+            animation: spinStop 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+        
+        @keyframes spinStop {
+            0% {
+                transform: translateY(0);
+                filter: blur(1px);
+            }
+            30% {
+                transform: translateY(-40px);
+                filter: blur(0.5px);
+            }
+            60% {
+                transform: translateY(-20px);
+                filter: blur(0.2px);
+            }
+            80% {
+                transform: translateY(-5px);
+                filter: blur(0px);
+            }
+            100% {
+                transform: translateY(0);
+                filter: blur(0px);
+            }
         }
 
         .payline {
@@ -994,8 +1067,18 @@
             
             randomizeReel(reel) {
                 const symbols = reel.querySelectorAll('.slot-symbol');
-                symbols.forEach(symbol => {
-                    symbol.textContent = this.symbols[Math.floor(Math.random() * this.symbols.length)];
+                symbols.forEach((symbol, index) => {
+                    // Add slight delay for more realistic symbol appearance
+                    setTimeout(() => {
+                        const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
+                        symbol.textContent = randomSymbol;
+                        
+                        // Add a subtle bounce effect when symbol appears
+                        symbol.style.transform = 'scale(1.1)';
+                        setTimeout(() => {
+                            symbol.style.transform = 'scale(1)';
+                        }, 100);
+                    }, index * 50);
                 });
             }
 
@@ -1031,20 +1114,34 @@
             }
 
             stopSpin() {
-                this.reels.forEach(reel => {
-                    reel.classList.remove('spinning');
-                    this.randomizeReel(reel);
+                // Add realistic stopping animation with staggered timing
+                this.reels.forEach((reel, index) => {
+                    setTimeout(() => {
+                        reel.classList.remove('spinning');
+                        reel.classList.add('stopping');
+                        
+                        // Randomize symbols during stop animation
+                        setTimeout(() => {
+                            this.randomizeReel(reel);
+                            reel.classList.remove('stopping');
+                            
+                            // Check if all reels have stopped
+                            if (index === this.reels.length - 1) {
+                                setTimeout(() => {
+                                    this.isSpinning = false;
+                                    
+                                    // Force win and show bonus popup on 3rd spin
+                                    if (this.spinCount >= 3) {
+                                        this.forceWin();
+                                        this.showBonusModal();
+                                    } else {
+                                        this.checkWin();
+                                    }
+                                }, 200);
+                            }
+                        }, 400);
+                    }, index * 300); // Stagger each reel stop by 300ms
                 });
-
-                this.isSpinning = false;
-                
-                // Force win and show bonus popup on 3rd spin
-                if (this.spinCount >= 3) {
-                    this.forceWin();
-                    this.showBonusModal();
-                } else {
-                    this.checkWin();
-                }
             }
 
             checkWin() {
