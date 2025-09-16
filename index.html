@@ -11,6 +11,151 @@
             padding: 0;
             box-sizing: border-box;
         }
+        
+        /* Loading Screen Styles */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.8s ease-out, visibility 0.8s ease-out;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .loading-logo {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 30px #FFD700, 0 0 60px #FFA500;
+            margin-bottom: 40px;
+            animation: logoGlow 2s ease-in-out infinite alternate;
+        }
+        
+        .loading-slots {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+        
+        .loading-reel {
+            width: 60px;
+            height: 180px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            border: 3px solid #FFD700;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .loading-symbol {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            border-bottom: 2px solid #d97706;
+            animation: loadingSpin 0.3s linear infinite;
+        }
+        
+        .loading-reel:nth-child(2) .loading-symbol {
+            animation-delay: 0.1s;
+        }
+        
+        .loading-reel:nth-child(3) .loading-symbol {
+            animation-delay: 0.2s;
+        }
+        
+        .loading-text {
+            color: #FFD700;
+            font-size: 1.5rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 30px;
+            animation: textPulse 1.5s ease-in-out infinite;
+        }
+        
+        .loading-progress {
+            width: 300px;
+            height: 6px;
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .loading-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500, #FFD700);
+            border-radius: 3px;
+            animation: loadingProgress 3s ease-in-out;
+            transform-origin: left;
+        }
+        
+        @keyframes logoGlow {
+            from { 
+                text-shadow: 0 0 20px #FFD700, 0 0 40px #FFA500;
+                transform: scale(1);
+            }
+            to { 
+                text-shadow: 0 0 40px #FFD700, 0 0 80px #FFA500;
+                transform: scale(1.05);
+            }
+        }
+        
+        @keyframes loadingSpin {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-180px); }
+        }
+        
+        @keyframes textPulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes loadingProgress {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
+        }
+        
+        /* Mobile loading adjustments */
+        @media (max-width: 768px) {
+            .loading-logo {
+                font-size: 2.2rem;
+                margin-bottom: 30px;
+            }
+            
+            .loading-reel {
+                width: 50px;
+                height: 150px;
+            }
+            
+            .loading-symbol {
+                height: 50px;
+                font-size: 1.5rem;
+            }
+            
+            .loading-text {
+                font-size: 1.2rem;
+                margin-bottom: 20px;
+            }
+            
+            .loading-progress {
+                width: 250px;
+            }
+        }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -22,6 +167,15 @@
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
+        }
+        
+        .main-content {
+            opacity: 0;
+            transition: opacity 0.8s ease-in;
+        }
+        
+        .main-content.loaded {
+            opacity: 1;
         }
         
         /* Floating decorative elements */
@@ -692,6 +846,34 @@
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-logo">💎 BONANZA BILLION</div>
+        <div class="loading-slots">
+            <div class="loading-reel">
+                <div class="loading-symbol">💎</div>
+                <div class="loading-symbol">🍒</div>
+                <div class="loading-symbol">🔔</div>
+            </div>
+            <div class="loading-reel">
+                <div class="loading-symbol">⭐</div>
+                <div class="loading-symbol">💎</div>
+                <div class="loading-symbol">🍋</div>
+            </div>
+            <div class="loading-reel">
+                <div class="loading-symbol">🔔</div>
+                <div class="loading-symbol">🍒</div>
+                <div class="loading-symbol">💎</div>
+            </div>
+        </div>
+        <div class="loading-text">Loading Your Billion Dollar Experience...</div>
+        <div class="loading-progress">
+            <div class="loading-bar"></div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
     <header class="header">
         <div class="container">
             <div class="header-content">
@@ -765,8 +947,29 @@
             </a>
         </div>
     </div>
+    </div>
 
     <script>
+        // Loading Screen Logic
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loadingScreen');
+                const mainContent = document.getElementById('mainContent');
+                
+                // Hide loading screen
+                loadingScreen.classList.add('hidden');
+                
+                // Show main content
+                mainContent.classList.add('loaded');
+                
+                // Remove loading screen from DOM after animation
+                setTimeout(() => {
+                    loadingScreen.remove();
+                }, 800);
+            }, 3000); // Show loading for 3 seconds
+        });
+        
+        // Slot Game Class
         class SlotGame {
             constructor() {
                 this.symbols = ['💎', '🍒', '🔔', '🍋', '⭐', '🍊', '🍇'];
