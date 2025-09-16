@@ -414,85 +414,33 @@
             transition: all 0.3s ease;
         }
         
-        .slot-reel.spinning .slot-symbol {
-            animation: realisticSpin 0.08s ease-out infinite;
-        }
-        
         .slot-reel.spinning {
-            position: relative;
+            animation: continuousSpin 0.1s linear infinite;
         }
         
-        .slot-reel.spinning::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(
-                to bottom,
-                rgba(255, 255, 255, 0.1) 0%,
-                transparent 20%,
-                transparent 80%,
-                rgba(0, 0, 0, 0.1) 100%
-            );
-            z-index: 2;
-            pointer-events: none;
-        }
-        
-        @keyframes realisticSpin {
+        @keyframes continuousSpin {
             0% { 
-                transform: translateY(0) scale(1);
-                opacity: 1;
-                filter: blur(0px);
-            }
-            25% {
-                transform: translateY(-60px) scale(0.98);
-                opacity: 0.9;
-                filter: blur(0.5px);
-            }
-            50% {
-                transform: translateY(-120px) scale(0.95);
-                opacity: 0.8;
-                filter: blur(1px);
-            }
-            75% {
-                transform: translateY(-180px) scale(0.98);
-                opacity: 0.9;
-                filter: blur(0.5px);
+                transform: translateY(0);
             }
             100% { 
-                transform: translateY(-240px) scale(1);
-                opacity: 1;
-                filter: blur(0px);
+                transform: translateY(-80px);
             }
         }
         
-        /* Stopping animation with realistic deceleration */
-        .slot-reel.stopping .slot-symbol {
-            animation: spinStop 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        /* Stopping animation */
+        .slot-reel.stopping {
+            animation: spinDecelerate 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
         
-        @keyframes spinStop {
+        @keyframes spinDecelerate {
             0% {
                 transform: translateY(0);
-                filter: blur(1px);
             }
-            30% {
+            50% {
                 transform: translateY(-40px);
-                filter: blur(0.5px);
-            }
-            60% {
-                transform: translateY(-20px);
-                filter: blur(0.2px);
-            }
-            80% {
-                transform: translateY(-5px);
-                filter: blur(0px);
             }
             100% {
                 transform: translateY(0);
-                filter: blur(0px);
             }
         }
 
@@ -1067,19 +1015,30 @@
             
             randomizeReel(reel) {
                 const symbols = reel.querySelectorAll('.slot-symbol');
-                symbols.forEach((symbol, index) => {
-                    // Add slight delay for more realistic symbol appearance
-                    setTimeout(() => {
-                        const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
-                        symbol.textContent = randomSymbol;
-                        
-                        // Add a subtle bounce effect when symbol appears
-                        symbol.style.transform = 'scale(1.1)';
-                        setTimeout(() => {
-                            symbol.style.transform = 'scale(1)';
-                        }, 100);
-                    }, index * 50);
+                symbols.forEach(symbol => {
+                    const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
+                    symbol.textContent = randomSymbol;
                 });
+            }
+            
+            createSpinningSymbols(reel) {
+                // Create additional symbols for continuous spinning effect
+                const existingSymbols = reel.querySelectorAll('.slot-symbol');
+                const symbolHeight = 80; // Height of each symbol
+                const reelHeight = 240; // Total reel height
+                const symbolsNeeded = Math.ceil(reelHeight / symbolHeight) + 2; // Extra symbols for seamless loop
+                
+                // Clear existing symbols
+                reel.innerHTML = '';
+                
+                // Create symbols for continuous loop
+                for (let i = 0; i < symbolsNeeded; i++) {
+                    const symbolDiv = document.createElement('div');
+                    symbolDiv.className = 'slot-symbol';
+                    const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
+                    symbolDiv.textContent = randomSymbol;
+                    reel.appendChild(symbolDiv);
+                }
             }
 
             setupEventListeners() {
@@ -1095,15 +1054,21 @@
             }
 
             spin() {
-                if (this.isSpinning || this.balance < this.bet) return;
+                if (this.isSpinning) return;
+                
+                if (this.balance < this.bet) {
+                    alert('Insufficient balance!');
+                    return;
+                }
                 
                 this.isSpinning = true;
-                this.spinCount++;
                 this.balance -= this.bet;
+                this.spinCount++;
                 this.updateDisplay();
                 
-                // Add spinning animation
+                // Create spinning symbols and start animation
                 this.reels.forEach(reel => {
+                    this.createSpinningSymbols(reel);
                     reel.classList.add('spinning');
                 });
 
@@ -1114,16 +1079,25 @@
             }
 
             stopSpin() {
-                // Add realistic stopping animation with staggered timing
+                // Stop reels with staggered timing
                 this.reels.forEach((reel, index) => {
                     setTimeout(() => {
                         reel.classList.remove('spinning');
                         reel.classList.add('stopping');
                         
-                        // Randomize symbols during stop animation
+                        // After stopping animation, set final symbols
                         setTimeout(() => {
-                            this.randomizeReel(reel);
                             reel.classList.remove('stopping');
+                            
+                            // Reset to 3 symbols and randomize
+                            reel.innerHTML = '';
+                            for (let i = 0; i < 3; i++) {
+                                const symbolDiv = document.createElement('div');
+                                symbolDiv.className = 'slot-symbol';
+                                const randomSymbol = this.symbols[Math.floor(Math.random() * this.symbols.length)];
+                                symbolDiv.textContent = randomSymbol;
+                                reel.appendChild(symbolDiv);
+                            }
                             
                             // Check if all reels have stopped
                             if (index === this.reels.length - 1) {
@@ -1139,8 +1113,8 @@
                                     }
                                 }, 200);
                             }
-                        }, 400);
-                    }, index * 300); // Stagger each reel stop by 300ms
+                        }, 800);
+                    }, index * 400); // Stagger each reel stop by 400ms
                 });
             }
 
